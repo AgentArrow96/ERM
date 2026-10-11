@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>ERM Topics 1-4: Guided Learning &amp; Exam Prep</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&amp;display=swap" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" />
+    <link rel="stylesheet" href="assets/css/main.css" />
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+    <script defer src="assets/js/questions.js"></script>
+    <script defer src="assets/js/diagrams.js"></script>
+    <script defer src="assets/js/visuals.js"></script>
+    <script defer src="assets/js/app.js"></script>
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar" id="sidebar">
+            <div class="brand">
+                <h1>Enterprise Risk Management</h1>
+                <p>Topics 1-4 · Guided learning &amp; exam prep</p>
+            </div>
+            <div class="nav-panel">
+                <p class="nav-label fg-gold">EXAM PREP</p>
+                <button class="nav-btn nav-exam active" id="nav-home" data-nav="home">Quick Start</button>
+                <button class="nav-btn nav-exam" id="nav-cheat" data-nav="cheat">Master Cheat Sheet</button>
+                <button class="nav-btn nav-exam" id="nav-traps" data-nav="traps">Dangerous Confusions</button>
+                <button class="nav-btn nav-exam" id="nav-simulator" data-nav="simulator">MCQ Simulator</button>
+                <button class="nav-btn nav-exam" id="nav-strategy" data-nav="strategy">Test Strategy</button>
+            </div>
+            <details class="nav-module">
+                <summary class="nav-module-summary fg-l1"><span>TOPIC 1</span><span class="chevron">⌄</span></summary>
+                <div class="nav-module-body">
+                    <button class="nav-btn nav-l1" id="nav-t1-risk" data-nav="t1-risk">Risk vs uncertainty</button>
+                    <button class="nav-btn nav-l1" id="nav-t1-exposure" data-nav="t1-exposure">Exposure, frequency, severity</button>
+                    <button class="nav-btn nav-l1" id="nav-t1-treat" data-nav="t1-treat">Avoid, prevent, reduce</button>
+                    <button class="nav-btn nav-l1" id="nav-t1-types" data-nav="t1-types">Pure, speculative, systematic</button>
+                    <button class="nav-btn nav-l1" id="nav-t1-enterprise" data-nav="t1-enterprise">Enterprise risk categories</button>
+                    <button class="nav-btn nav-l1" id="nav-t1-notes" data-nav="t1-notes">Full intuitive explanation</button>
+                    <button class="nav-btn nav-l1" id="nav-t1-subjective" data-nav="t1-subjective">Subjective exam prep</button>
+                    <button class="nav-btn nav-l1" id="nav-t1-prep" data-nav="t1-prep">MCQ prep</button>
+                </div>
+            </details>
+            <details class="nav-module">
+                <summary class="nav-module-summary fg-l2"><span>TOPIC 2</span><span class="chevron">⌄</span></summary>
+                <div class="nav-module-body">
+                    <button class="nav-btn nav-l2" id="nav-t2-structures" data-nav="t2-structures">Business structures</button>
+                    <button class="nav-btn nav-l2" id="nav-t2-objectives" data-nav="t2-objectives">Objectives and TBL</button>
+                    <button class="nav-btn nav-l2" id="nav-t2-levels" data-nav="t2-levels">Four levels of risk</button>
+                    <button class="nav-btn nav-l2" id="nav-t2-rm" data-nav="t2-rm">RM process and objectives</button>
+                    <button class="nav-btn nav-l2" id="nav-t2-evolution" data-nav="t2-evolution">Insurance to holistic RM</button>
+                    <button class="nav-btn nav-l2" id="nav-t2-erm" data-nav="t2-erm">Silos vs ERM</button>
+                    <button class="nav-btn nav-l2" id="nav-t2-notes" data-nav="t2-notes">Full intuitive explanation</button>
+                    <button class="nav-btn nav-l2" id="nav-t2-subjective" data-nav="t2-subjective">Subjective exam prep</button>
+                    <button class="nav-btn nav-l2" id="nav-t2-prep" data-nav="t2-prep">MCQ prep</button>
+                </div>
+            </details>
+            <details class="nav-module">
+                <summary class="nav-module-summary fg-l3"><span>TOPIC 3</span><span class="chevron">⌄</span></summary>
+                <div class="nav-module-body">
+                    <button class="nav-btn nav-l3" id="nav-t3-governance" data-nav="t3-governance">Governance vs management</button>
+                    <button class="nav-btn nav-l3" id="nav-t3-riskgov" data-nav="t3-riskgov">Risk governance and GRC</button>
+                    <button class="nav-btn nav-l3" id="nav-t3-sox" data-nav="t3-sox">Standards, laws, SOX</button>
+                    <button class="nav-btn nav-l3" id="nav-t3-malaysia" data-nav="t3-malaysia">Malaysian framework</button>
+                    <button class="nav-btn nav-l3" id="nav-t3-coso" data-nav="t3-coso">COSO cube</button>
+                    <button class="nav-btn nav-l3" id="nav-t3-iso" data-nav="t3-iso">ISO 31000 and AS/NZS 4360</button>
+                    <button class="nav-btn nav-l3" id="nav-t3-notes" data-nav="t3-notes">Full intuitive explanation</button>
+                    <button class="nav-btn nav-l3" id="nav-t3-subjective" data-nav="t3-subjective">Subjective exam prep</button>
+                    <button class="nav-btn nav-l3" id="nav-t3-prep" data-nav="t3-prep">MCQ prep</button>
+                </div>
+            </details>
+            <details class="nav-module">
+                <summary class="nav-module-summary fg-l4"><span>TOPIC 4</span><span class="chevron">⌄</span></summary>
+                <div class="nav-module-body">
+                    <button class="nav-btn nav-l4" id="nav-t4-sustain" data-nav="t4-sustain">Sustainability and TBL</button>
+                    <button class="nav-btn nav-l4" id="nav-t4-sdg-esg" data-nav="t4-sdg-esg">SDGs, ESG, metrics</button>
+                    <button class="nav-btn nav-l4" id="nav-t4-esg-risk" data-nav="t4-esg-risk">ESG risk and materiality</button>
+                    <button class="nav-btn nav-l4" id="nav-t4-greenwash" data-nav="t4-greenwash">Greenwashing</button>
+                    <button class="nav-btn nav-l4" id="nav-t4-manage" data-nav="t4-manage">Managing ESG risk</button>
+                    <button class="nav-btn nav-l4" id="nav-t4-malaysia" data-nav="t4-malaysia">Malaysia and ESG indices</button>
+                    <button class="nav-btn nav-l4" id="nav-t4-notes" data-nav="t4-notes">Full intuitive explanation</button>
+                    <button class="nav-btn nav-l4" id="nav-t4-subjective" data-nav="t4-subjective">Subjective exam prep</button>
+                    <button class="nav-btn nav-l4" id="nav-t4-prep" data-nav="t4-prep">MCQ prep</button>
+                </div>
+            </details>
+        </aside>
+        <button aria-controls="sidebar" aria-expanded="false" aria-label="Open navigation" class="mobile-menu" id="mobile-menu" data-action="toggle-sidebar"><span class="bars" aria-hidden="true"></span></button>
+        <button type="button" class="contents-fab" id="contents-fab" data-action="contents" title="Back to the section list" hidden>↑ Contents</button>
+        <main class="main">
+            <div class="content">
+                <div class="topbar">
+                    <button data-action="print">Print current page</button>
+                    <button data-action="reset-progress">↺ Reset progress</button>
+                </div>
+                <section class="page-section hidden" data-page="home" id="sec-home"></section>
+                <section class="page-section hidden" data-page="cheat" id="sec-cheat"></section>
+                <section class="page-section hidden" data-page="traps" id="sec-traps"></section>
+                <section class="page-section hidden" data-page="simulator" id="sec-simulator"></section>
+                <section class="page-section hidden" data-page="strategy" id="sec-strategy"></section>
+                <section class="page-section hidden" data-page="t1-risk" id="sec-t1-risk"></section>
+                <section class="page-section hidden" data-page="t1-exposure" id="sec-t1-exposure"></section>
+                <section class="page-section hidden" data-page="t1-treat" id="sec-t1-treat"></section>
+                <section class="page-section hidden" data-page="t1-types" id="sec-t1-types"></section>
+                <section class="page-section hidden" data-page="t1-enterprise" id="sec-t1-enterprise"></section>
+                <section class="page-section hidden" data-page="t1-notes" id="sec-t1-notes"></section>
+                <section class="page-section hidden" data-page="t1-subjective" id="sec-t1-subjective"></section>
+                <section class="page-section hidden" data-page="t1-prep" id="sec-t1-prep"></section>
+                <section class="page-section hidden" data-page="t2-structures" id="sec-t2-structures"></section>
+                <section class="page-section hidden" data-page="t2-objectives" id="sec-t2-objectives"></section>
+                <section class="page-section hidden" data-page="t2-levels" id="sec-t2-levels"></section>
+                <section class="page-section hidden" data-page="t2-rm" id="sec-t2-rm"></section>
+                <section class="page-section hidden" data-page="t2-evolution" id="sec-t2-evolution"></section>
+                <section class="page-section hidden" data-page="t2-erm" id="sec-t2-erm"></section>
+                <section class="page-section hidden" data-page="t2-notes" id="sec-t2-notes"></section>
+                <section class="page-section hidden" data-page="t2-subjective" id="sec-t2-subjective"></section>
+                <section class="page-section hidden" data-page="t2-prep" id="sec-t2-prep"></section>
+                <section class="page-section hidden" data-page="t3-governance" id="sec-t3-governance"></section>
+                <section class="page-section hidden" data-page="t3-riskgov" id="sec-t3-riskgov"></section>
+                <section class="page-section hidden" data-page="t3-sox" id="sec-t3-sox"></section>
+                <section class="page-section hidden" data-page="t3-malaysia" id="sec-t3-malaysia"></section>
+                <section class="page-section hidden" data-page="t3-coso" id="sec-t3-coso"></section>
+                <section class="page-section hidden" data-page="t3-iso" id="sec-t3-iso"></section>
+                <section class="page-section hidden" data-page="t3-notes" id="sec-t3-notes"></section>
+                <section class="page-section hidden" data-page="t3-subjective" id="sec-t3-subjective"></section>
+                <section class="page-section hidden" data-page="t3-prep" id="sec-t3-prep"></section>
+                <section class="page-section hidden" data-page="t4-sustain" id="sec-t4-sustain"></section>
+                <section class="page-section hidden" data-page="t4-sdg-esg" id="sec-t4-sdg-esg"></section>
+                <section class="page-section hidden" data-page="t4-esg-risk" id="sec-t4-esg-risk"></section>
+                <section class="page-section hidden" data-page="t4-greenwash" id="sec-t4-greenwash"></section>
+                <section class="page-section hidden" data-page="t4-manage" id="sec-t4-manage"></section>
+                <section class="page-section hidden" data-page="t4-malaysia" id="sec-t4-malaysia"></section>
+                <section class="page-section hidden" data-page="t4-notes" id="sec-t4-notes"></section>
+                <section class="page-section hidden" data-page="t4-subjective" id="sec-t4-subjective"></section>
+                <section class="page-section hidden" data-page="t4-prep" id="sec-t4-prep"></section>
+
+            </div>
+        </main>
+    </div>
+</body>
+</html>
