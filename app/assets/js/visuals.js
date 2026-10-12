@@ -482,6 +482,167 @@ ML_VIS.t2_silo_vs_erm = function (root) {
     }
     draw();
 };
+// Topic 2 visuals (part 2): concept-explanation widgets
+ML_VIS.t2_liability_sim = function (root) {
+    const ASSETS = 100;  // RM'000 of business assets
+    const FORMS = {
+        sole: ['Sole proprietorship', 'unlimited'], part: ['General partnership (2 partners)', 'joint'],
+        llp: ['LLP', 'limited'], sdn: ['Sdn. Bhd.', 'limited'],
+    };
+    let form = 'sole', debt = 500;
+    const W = 560, H = 210, svg = V.svg(W, H), read = V.h('p', { class: 'vis-readout' });
+    root.append(V.seg(Object.entries(FORMS).map(([k, f]) => [k, f[0]]), form, v => { form = v; draw(); }),
+        V.slider('Business debts', 50, 1000, 50, debt, v => { debt = v; draw(); }, v => 'RM' + v + 'k'), svg, read);
+    function draw() {
+        const kind = FORMS[form][1], fromAssets = Math.min(debt, ASSETS), rest = debt - fromAssets;
+        const personal = kind === 'limited' ? 0 : rest, unpaid = kind === 'limited' ? rest : 0;
+        V.clear(svg); const r = V.rng(5), L = 20, PW = 520, sc = PW / 1000;
+        const seg = (x, w, c, cs, t) => { if (w <= 0) return x; V.rrect(svg, x, 60, w * sc, 60, c, cs, r); if (w * sc > 40) V.text(svg, x + w * sc / 2, 90, w * sc < 110 ? t.split(' ').pop() : t, { size: 13, weight: 700, color: c }); return x + w * sc; };
+        V.text(svg, L, 30, `Who pays RM${debt}k of debts? (business assets RM${ASSETS}k)`, { size: 15, anchor: 'start', weight: 700 });
+        let x = seg(L, fromAssets, V.C.slate, V.C.slateS, 'business assets');
+        x = seg(x, personal, V.C.rose, V.C.roseS, kind === 'joint' ? "partners' personal assets" : "owner's house, savings");
+        seg(x, unpaid, V.C.amber, V.C.amberS, 'creditors bear the loss');
+        V.text(svg, L, 150, kind === 'limited' ? 'Liability stops at the investment: the company is a separate legal entity.' :
+            kind === 'joint' ? 'Jointly and severally liable: either partner can be pursued for the whole debt.' : 'Unlimited liability: business risk becomes personal risk.', { size: 13, anchor: 'start', color: '#334155' });
+        V.text(svg, L, 178, 'The business risk itself (lost sales, failed project) is the same in every form.', { size: 13, anchor: 'start', color: '#64748b' });
+        read.innerHTML = `<b>${FORMS[form][0]}</b>: ` + (kind === 'limited' ? `owners lose what they invested; the remaining RM${rest}k is the creditors' problem, not the owners' personal one.` :
+            kind === 'joint' ? `RM${rest}k must come from the partners personally, and Ali can be pursued for all of it even if Bala signed the bad contract.` :
+                `the owner must find RM${rest}k personally. Simplicity reduces admin but concentrates risk on one person.`) +
+            ' Legal form changes <b>who bears the loss</b>, not how risky the business is.';
+    }
+    draw();
+};
+
+ML_VIS.t2_objective_tradeoff = function (root) {
+    let cut = 0.1, maint = 0, obj = 'sales';
+    const W = 560, H = 240, svg = V.svg(W, H), read = V.h('p', { class: 'vis-readout' });
+    root.append(V.h('div', { class: 'vis-row' }, V.slider('Price cut', 0, 0.3, 0.05, cut, v => { cut = v; draw(); }, v => Math.round(v * 100) + '%'),
+        V.slider('Maintenance cut', 0, 0.6, 0.1, maint, v => { maint = v; draw(); }, v => Math.round(v * 100) + '%')),
+        V.seg([['sales', 'Objective: maximise sales'], ['profit', 'Objective: maximise profit'], ['wealth', 'Objective: long-term wealth']], obj, v => { obj = v; draw(); }), svg, read);
+    const calc = (c, m) => {
+        const P = 100 * (1 - c), Q = 1000 * (1 + 2 * c), rev = P * Q, profit = rev - 60 * Q - 10000 * (1 - m) - 10000;
+        const loss = (0.05 + 0.4 * m) * 200000, wealth = 5 * (profit - loss);
+        return { rev, profit, loss, wealth };
+    };
+    function draw() {
+        const base = calc(0, 0), now = calc(cut, maint);
+        const items = [['Sales revenue', 'rev', V.C.sky], ['Profit this year', 'profit', V.C.amber], ['Expected breakdown loss / yr', 'loss', V.C.rose], ['5-year value (profit - losses)', 'wealth', V.C.green]];
+        V.clear(svg); const r = V.rng(8);
+        items.forEach(([lab, k, c], i) => {
+            const y = 20 + i * 52, b = base[k], v = now[k], pct = b ? (v - b) / Math.abs(b) * 100 : 0, w = Math.min(Math.abs(pct), 95) * 1.6;
+            V.text(svg, 10, y + 18, lab, { size: 13, anchor: 'start' });
+            V.rline(svg, 380, y, 380, y + 36, '#94a3b8', 1.2, r);
+            if (w > 1) V.rrect(svg, pct < 0 ? 380 - w : 380, y + 4, w, 28, c, c + '22', r);
+            V.text(svg, pct < 0 ? 380 - w - 6 : 380 + w + 6, y + 18, (pct > 0 ? '+' : '') + V.fmt(pct, 0) + '%', { size: 13, weight: 700, color: c, anchor: pct < 0 ? 'end' : 'start' });
+        });
+        V.text(svg, 380, H - 6, 'change versus no price cut and full maintenance', { size: 11, color: '#64748b' });
+        const good = { sales: now.rev >= base.rev, profit: now.profit >= base.profit, wealth: now.wealth >= base.wealth }[obj];
+        read.innerHTML = `Against the objective <b>${{ sales: 'maximise sales', profit: 'maximise profit', wealth: 'long-term shareholder wealth' }[obj]}</b>, this decision ${good ? '<b>looks good</b>' : '<b>looks bad</b>'}. ` +
+            'The same decision can be right for one objective and wrong for another: sales are not profit, and this year\'s profit is not long-term wealth. That is why risk management cannot be separated from strategy.';
+    }
+    draw();
+};
+
+ML_VIS.t2_risk_appetite = function (root) {
+    const S = [['A', 4, 5], ['D', 8, 12], ['B', 15, 20], ['C', 25, 45]];  // name, expected return %, risk (volatility %)
+    let appetite = 25, capacity = 25;
+    const W = 560, H = 270, svg = V.svg(W, H), read = V.h('p', { class: 'vis-readout' });
+    root.append(V.h('div', { class: 'vis-row' }, V.slider('Risk appetite (max volatility)', 5, 50, 1, appetite, v => { appetite = v; draw(); }, v => v + '%'),
+        V.slider('Risk capacity (max bad-year loss)', 5, 60, 1, capacity, v => { capacity = v; draw(); }, v => v + '%')), svg, read);
+    function draw() {
+        const L = 50, T = 14, PW = 480, PH = 210, X = v => L + v / 50 * PW, Y = v => T + PH - v / 30 * PH;
+        V.clear(svg); const r = V.rng(6);
+        svg.append(V.s('rect', { x: L, y: T, width: X(appetite) - L, height: PH, fill: V.C.limeS, opacity: 0.7 }));
+        V.rline(svg, L, T + PH, L + PW, T + PH, V.C.ink, 1.4, r); V.rline(svg, L, T, L, T + PH, V.C.ink, 1.4, r);
+        V.text(svg, L + PW / 2, H - 6, 'risk (volatility %) →', { size: 12, color: '#64748b' });
+        const yl = V.text(svg, 14, T + PH / 2, 'expected return % →', { size: 12, color: '#64748b' }); yl.setAttribute('transform', `rotate(-90 14 ${T + PH / 2})`);
+        const ok = [];
+        S.forEach(([n, ret, risk]) => {
+            const worst = ret - 2 * risk, fits = risk <= appetite && -worst <= capacity;
+            if (fits) ok.push([n, ret]);
+            svg.append(V.s('circle', { cx: X(risk), cy: Y(ret), r: 11, fill: fits ? V.C.green : '#cbd5e1', stroke: '#fff', 'stroke-width': 2 }));
+            V.text(svg, X(risk), Y(ret) - 20, `${n}: ${ret}%`, { size: 13, weight: 700, color: fits ? V.C.green : '#94a3b8' });
+        });
+        const best = ok.sort((a, b) => b[1] - a[1])[0];
+        read.innerHTML = `Strategies within appetite <b>and</b> capacity (bad year ≈ return - 2 x volatility): ${ok.length ? ok.map(o => o[0]).join(', ') : 'none'}. ` +
+            (best ? `ERM would favour <b>${best[0]}</b>, the highest expected return that still fits, not automatically the safest (A).` : 'Nothing fits: rethink the strategy or strengthen the balance sheet.') +
+            ' Risk management optimises decisions under uncertainty; it does not simply minimise risk.';
+    }
+    draw();
+};
+
+ML_VIS.t2_level_sorter = function (root) {
+    const ITEMS = {
+        china: ['Decide to enter the China market', 'Strategic', 'A change of direction: is it the right thing to do?'],
+        ev: ['Launch an EV-first model line', 'Strategic', 'Whether the chosen direction succeeds.'],
+        supplier: ['Choose a cheaper battery supplier', 'Tactical', 'How the strategy is executed (suppliers).'],
+        hedge: ['Fuel hedging and aircraft financing', 'Tactical', 'Financing and market risk sit at the tactical level on the slide.'],
+        machine: ['A production machine breaks down', 'Operational', 'Day-to-day execution failed.'],
+        payment: ['Clerk enters the wrong payment amount', 'Operational', 'Human error in daily processes.'],
+        privacy: ['New data-privacy law tightens consent rules', 'Compliance', 'Are we allowed to do what we are doing?'],
+        licence: ['Landing rights / operating licence lapses', 'Compliance', 'A legal requirement for operating.'],
+    };
+    const TONE = { Strategic: V.C.lime, Tactical: V.C.sky, Operational: V.C.amber, Compliance: V.C.rose };
+    let key = 'china', shown = false;
+    const out = V.h('div', { class: 'vis-pipeline' }), read = V.h('p', { class: 'vis-readout' });
+    const btn = V.btn('Reveal the level', () => { shown = !shown; draw(); }, 'primary');
+    root.append(V.seg(Object.entries(ITEMS).map(([k, it]) => [k, it[0]]), key, v => { key = v; shown = false; draw(); }), V.h('div', { class: 'vis-row' }, btn), out, read);
+    function draw() {
+        const [t, lvl, why] = ITEMS[key];
+        V.clear(out);
+        out.append(V.h('div', { class: 'vis-prow vis-chainrow' }, V.h('b', {}, t),
+            V.h('span', { class: 'vis-chip', style: shown ? { borderColor: TONE[lvl], background: TONE[lvl] + '22', fontWeight: 700 } : {} }, shown ? lvl : '?')));
+        btn.textContent = shown ? 'Hide' : 'Reveal the level';
+        read.innerHTML = shown ? `<b>${lvl}</b>: ${why}` : 'Strategic = right thing? Tactical = how to execute? Operational = day to day? Compliance = allowed? Decide, then reveal.';
+    }
+    draw();
+};
+
+ML_VIS.t2_acquisition_cascade = function (root) {
+    const LINKS = [['Environmental complaints', 'Regulator shuts the key supplier', 0.3, 'env'], ['Regulator shuts the key supplier', 'Production stops', 0.8, 'sup'],
+        ['Production stops', 'Revenue falls', 0.9, 'it'], ['Revenue falls', 'Debt payments come under pressure', 0.7, 'lev'], ['Debt payments come under pressure', 'Liquidity crisis; acquisition strategy fails', 0.6, 'liq']];
+    const TREAT = { env: ['Environmental due diligence', 0.4], sup: ['Diversify suppliers', 0.25], it: ['IT integration and continuity plan', 0.7], lev: ['Lower leverage', 0.5], liq: ['Liquidity reserve', 0.35] };
+    const on = {};
+    const box = V.h('div', { class: 'vis-pipeline' }), read = V.h('p', { class: 'vis-readout' });
+    const checks = V.h('div', { class: 'vis-row' }, Object.entries(TREAT).map(([k, [t]]) => {
+        const b = V.h('button', { type: 'button', class: 'vis-btn' }, '+ ' + t);
+        b.addEventListener('click', () => { on[k] = !on[k]; b.classList.toggle('primary', !!on[k]); b.textContent = (on[k] ? '● ' : '+ ') + t; draw(); });
+        return b;
+    }));
+    root.append(V.h('p', { class: 'vis-note' }, 'ABC Berhad buys an Indonesian manufacturer with heavy debt. Add treatments and watch each link weaken.'), checks, box, read);
+    function draw() {
+        V.clear(box); let p = 1, p0 = 1;
+        LINKS.forEach(([a, b, prob, k]) => {
+            const q = prob * (on[k] ? TREAT[k][1] : 1); p *= q; p0 *= prob;
+            box.append(V.h('div', { class: 'vis-prow vis-chainrow' }, V.h('b', {}, a + ' → ' + b),
+                V.h('span', { class: 'vis-chip', style: { borderColor: on[k] ? V.C.green : V.C.rose, background: (on[k] ? V.C.green : V.C.rose) + '18' } }, 'link ' + Math.round(q * 100) + '%')));
+        });
+        read.innerHTML = `Chance the whole chain runs to a failed acquisition: <b>${V.fmt(p * 100, 1)}%</b> (untreated ${V.fmt(p0 * 100, 1)}%). ` +
+            'Silo teams would each see one link. ERM looks at the <b>whole chain</b>, treats the weakest links and then compares the <b>residual risk</b> with the expected strategic value (+20% market share) before deciding.';
+    }
+    draw();
+};
+
+ML_VIS.t2_stage_quiz = function (root) {
+    const SC = {
+        a: ['The firm only buys property insurance and claims after each fire.', 'Insurance-based / traditional RM', 'Pure risks, reactive, insurer pays. Uninsurable risks ignored.'],
+        b: ['Treasury hedges FX, IT handles cyber, operations handles safety; nobody combines them.', 'Traditional (silo) RM / conventional CRM', 'Specialists manage their own risks; correlations go unseen.'],
+        c: ['Before entering Indonesia, the risk team weighs strategic, FX, regulatory and supply risks with management.', 'Integrated RM (1980s-90s)', 'Risk becomes part of the strategic decision itself.'],
+        d: ['The board reviews all material risks together against long-term firm value and risk appetite.', 'Enterprise RM (2000s)', 'Holistic, enterprise-wide, value-based.'],
+        e: ['Climate, governance and compliance risks are built into the same risk framework as financial risks.', 'Holistic RM (recent)', 'ERM widened to sustainability, governance and compliance.'],
+    };
+    let key = 'a', shown = false;
+    const box = V.h('div', { class: 'vis-table-wrap' }), read = V.h('p', { class: 'vis-readout' });
+    const btn = V.btn('Reveal the stage', () => { shown = !shown; draw(); }, 'primary');
+    root.append(V.seg(Object.keys(SC).map((k, i) => [k, 'Firm ' + (i + 1)]), key, v => { key = v; shown = false; draw(); }), V.h('div', { class: 'vis-row' }, btn), box, read);
+    function draw() {
+        const [desc, stage, why] = SC[key];
+        box.innerHTML = `<table class="vis-table" style="width:100%"><tr><th>What the firm does</th><td>${desc}</td></tr><tr><th>Stage</th><td class="${shown ? 'hl' : ''}">${shown ? stage : '<i>decide first</i>'}</td></tr><tr><th>Why</th><td>${shown ? why : ''}</td></tr></table>`;
+        btn.textContent = shown ? 'Hide' : 'Reveal the stage';
+        read.innerHTML = 'Insurance → traditional silos → integrated → ERM → holistic. Each stage appeared because the previous one stopped being enough.';
+    }
+    draw();
+};
 // Topic 3 visuals
 ML_VIS.t3_coso_cube3d = async function (root) {
     const OBJ = [['Strategic', 'high-level goals aligned with the mission'], ['Operations', 'effective and efficient use of resources'],
@@ -532,6 +693,154 @@ ML_VIS.t3_coso_cube3d = async function (root) {
             'Every cell is a question the enterprise must be able to answer; the cube forces ERM across objectives and levels, not just inside one risk department.';
     }
     paint();
+};
+// Topic 3 visuals (part 2): concept-explanation widgets
+ML_VIS.t3_oversight_sim = function (root) {
+    const EL = { acc: ['Accountability', 0.35], tra: ['Transparency (full risk report reaches the board)', 0.45], reg: ['Regulatory framework', 0.2],
+        eth: ['Ethics (conflicts declared)', 0.3], adm: ['Administrative structure (independent risk committee)', 0.4] };
+    const on = {}; let charisma = 0.3;
+    const W = 560, H = 120, svg = V.svg(W, H), read = V.h('p', { class: 'vis-readout' });
+    const btns = V.h('div', { class: 'vis-row' }, Object.entries(EL).map(([k, [t]]) => {
+        const b = V.h('button', { type: 'button', class: 'vis-btn' }, '+ ' + t);
+        b.addEventListener('click', () => { on[k] = !on[k]; b.classList.toggle('primary', !!on[k]); b.textContent = (on[k] ? '● ' : '+ ') + t; draw(); });
+        return b;
+    }));
+    root.append(V.h('p', { class: 'vis-note' }, 'A CEO pushes a RM3bn acquisition: directors have ties to the seller, due diligence is rushed. Switch on governance elements.'), btns,
+        V.slider('CEO persuasiveness', 0, 0.9, 0.1, charisma, v => { charisma = v; draw(); }, v => Math.round(v * 100) + '%'), svg, read);
+    function draw() {
+        let p = 0.9;
+        Object.entries(EL).forEach(([k, [, c]]) => { if (on[k]) p *= 1 - c * (1 - charisma * 0.6); });
+        V.clear(svg); const r = V.rng(4), w = p * 500;
+        V.text(svg, 10, 20, 'Chance the flawed deal sails through unchallenged', { size: 14, anchor: 'start', weight: 700 });
+        V.rrect(svg, 10, 40, 520, 44, '#cbd5e1', '#f8fafc', r);
+        V.rrect(svg, 10, 40, Math.max(w, 2), 44, p > 0.5 ? V.C.rose : p > 0.2 ? V.C.amber : V.C.green, (p > 0.5 ? V.C.rose : p > 0.2 ? V.C.amber : V.C.green) + '33', r);
+        V.text(svg, 20 + w, 62, Math.round(p * 100) + '%', { size: 16, weight: 700, anchor: 'start' });
+        const n = Object.values(on).filter(Boolean).length;
+        read.innerHTML = (n === 0 ? 'No governance: management decides and judges itself. ' : `${n} element${n > 1 ? 's' : ''} active. `) +
+            '<b>Counter-intuitive:</b> raising the CEO\'s persuasiveness makes the deal <i>more</i> dangerous, not less. A brilliant, convincing leader needs <b>more</b> independent challenge, because good management is not the same as good governance.';
+    }
+    draw();
+};
+
+ML_VIS.t3_incentive_culture = function (root) {
+    let vol = 80, poster = false;
+    const W = 560, H = 200, svg = V.svg(W, H), read = V.h('p', { class: 'vis-readout' });
+    const pb = V.btn('Add a giant "Safety First" poster', () => { poster = !poster; pb.textContent = poster ? 'Remove the poster' : 'Add a giant "Safety First" poster'; draw(); });
+    root.append(V.slider('Bonus weight on production volume (rest on safety)', 0, 100, 10, vol, v => { vol = v; draw(); }, v => v + '%'), V.h('div', { class: 'vis-row' }, pb), svg, read);
+    function draw() {
+        const skip = Math.round(5 + 0.6 * vol), r = V.rng(9);
+        V.clear(svg);
+        V.text(svg, 10, 20, 'Share of required safety stops that workers skip', { size: 14, anchor: 'start', weight: 700 });
+        V.rrect(svg, 10, 40, 520, 40, '#cbd5e1', '#f8fafc', r);
+        V.rrect(svg, 10, 40, 520 * skip / 100, 40, skip > 40 ? V.C.rose : skip > 20 ? V.C.amber : V.C.green, (skip > 40 ? V.C.rose : V.C.green) + '33', r);
+        V.text(svg, 20 + 520 * skip / 100, 60, skip + '%', { size: 16, weight: 700, anchor: 'start' });
+        V.text(svg, 10, 116, 'Stated culture (poster): "safety is our highest priority"', { size: 13, anchor: 'start', color: '#475569' });
+        V.text(svg, 10, 142, 'Real culture (what pay rewards): ' + (vol >= 60 ? 'output first' : vol >= 30 ? 'mixed signals' : 'safety first'), { size: 13, anchor: 'start', weight: 700, color: vol >= 60 ? V.C.rose : V.C.green });
+        if (poster) V.text(svg, 10, 176, 'Poster added... skipped stops unchanged.', { size: 14, anchor: 'start', color: V.C.amber, weight: 700 });
+        read.innerHTML = '<b>Counter-intuitive:</b> the poster changes nothing; the bonus formula changes everything. Risk governance is "embedded" only when incentives, accountability and behaviour point the same way as the policy.';
+    }
+    draw();
+};
+
+ML_VIS.t3_info_filter = function (root) {
+    let layers = 4, disc = 0.25, direct = false;
+    const TRUE = 90, W = 560, H = 240, svg = V.svg(W, H), read = V.h('p', { class: 'vis-readout' });
+    const db = V.btn('Add a direct risk-reporting line to the board', () => { direct = !direct; db.classList.toggle('primary', direct); draw(); });
+    root.append(V.h('div', { class: 'vis-row' }, V.slider('Reporting layers', 1, 6, 1, layers, v => { layers = v; draw(); }),
+        V.slider('Bad news softened per layer', 0, 0.5, 0.05, disc, v => { disc = v; draw(); }, v => Math.round(v * 100) + '%')), V.h('div', { class: 'vis-row' }, db), svg, read);
+    const col = v => v >= 70 ? V.C.rose : v >= 40 ? V.C.amber : V.C.green;
+    function draw() {
+        const vals = [TRUE];
+        for (let i = 0; i < layers; i++) vals.push(vals[i] * (1 - disc));
+        const board = direct ? TRUE : vals[vals.length - 1];
+        V.clear(svg); const r = V.rng(3), n = vals.length + 1, bw = Math.min(70, 480 / n - 10);
+        const names = ['Plant manager'].concat(Array.from({ length: layers }, (_, i) => 'Layer ' + (i + 1)), ['BOARD SEES']);
+        vals.concat([board]).forEach((v, i) => {
+            const x = 20 + i * (bw + 10), h = v * 1.7;
+            V.rrect(svg, x, 190 - h, bw, h, col(v), col(v) + '33', r);
+            V.text(svg, x + bw / 2, 180 - h, Math.round(v), { size: 13, weight: 700, color: col(v) });
+            V.text(svg, x + bw / 2, 206, names[i].length > 9 ? names[i].split(' ')[0] : names[i], { size: 11, color: '#475569' });
+        });
+        V.text(svg, 20, 230, 'risk score: red ≥ 70, amber ≥ 40, green below', { size: 11, anchor: 'start', color: '#64748b' });
+        read.innerHTML = `Reality on the shop floor: <b>${TRUE} (red)</b>. The board sees <b>${Math.round(board)}</b> (${board >= 70 ? 'red' : board >= 40 ? 'amber' : 'green'}). ` +
+            (direct ? 'A direct risk line bypasses the softening layers: information travels up intact.' :
+                '<b>Counter-intuitive:</b> nobody lied outright; each layer just softened the news a little, and the dashboard turned green. Decision quality can never exceed information quality: that is the transparency element.');
+    }
+    draw();
+};
+
+ML_VIS.t3_swiss_cheese = function (root) {
+    const L = [['dual', 'Two signatures above RM1m', 0.6], ['recon', 'Independent reconciliation', 0.5], ['audit', 'Internal audit', 0.4], ['board', 'Board audit committee', 0.3]];
+    const on = { dual: true, recon: true, audit: true, board: false }; let collude = false;
+    const W = 560, H = 210, svg = V.svg(W, H), read = V.h('p', { class: 'vis-readout' });
+    const row = V.h('div', { class: 'vis-row' }, L.map(([k, t]) => {
+        const b = V.h('button', { type: 'button', class: 'vis-btn' + (on[k] ? ' primary' : '') }, t);
+        b.addEventListener('click', () => { on[k] = !on[k]; b.classList.toggle('primary', on[k]); draw(); });
+        return b;
+    }));
+    const cb = V.btn('CEO and CFO collude', () => { collude = !collude; cb.classList.toggle('primary', collude); draw(); });
+    root.append(row, V.h('div', { class: 'vis-row' }, cb), svg, read);
+    function catchRate(k, c) { if (!collude) return c; return k === 'dual' ? 0 : k === 'recon' ? 0.15 : c; }
+    function draw() {
+        V.clear(svg); const r = V.rng(12); let p = 1;
+        const act = L.filter(([k]) => on[k]);
+        act.forEach(([k, t, c], i) => {
+            const x = 70 + i * 120, cr = catchRate(k, c); p *= 1 - cr;
+            svg.append(V.s('rect', { x, y: 20, width: 34, height: 150, rx: 6, fill: '#fde68a', stroke: '#d97706', 'stroke-width': 1.5 }));
+            const holes = collude ? [95] : [30 + ((i * 53) % 120), 30 + ((i * 53 + 60) % 120)];
+            holes.forEach(hy => svg.append(V.s('ellipse', { cx: x + 17, cy: hy, rx: 9, ry: 8 + (1 - cr) * 10, fill: '#fff', stroke: '#d97706' })));
+            V.text(svg, x + 17, 188, t.split(' ').slice(0, 2).join(' '), { size: 11, color: '#475569' });
+        });
+        if (collude || !act.length) V.arrow(svg, 20, 95, 540, 95, V.C.rose, 2.5, r);
+        else V.arrow(svg, 20, 95, 60, 95, V.C.rose, 2.5, r);
+        V.text(svg, 20, 80, 'fraud', { size: 12, color: V.C.rose, anchor: 'start', weight: 700 });
+        read.innerHTML = `Chance a RM5m fraudulent payment gets through every layer: <b>${Math.round(p * 100)}%</b>. ` +
+            (collude ? '<b>Collusion lines up the holes:</b> the two people the dual signature assumes are independent are the fraudsters. Controls reduce risk, never to zero; governance (independent oversight, audit, culture) must sit above them.' :
+                'Each control is a slice with holes. Layers together catch most problems, but no single control is magical.');
+    }
+    draw();
+};
+
+ML_VIS.t3_regulator_finder = function (root) {
+    const ORG = {
+        bank: ['Commercial bank', ['Bank Negara Malaysia: governance and risk-governance guidelines', 'SSM: Companies Act 2016', 'If listed: SC (MCCG) and Bursa requirements too']],
+        plc: ['Bursa-listed manufacturer', ['Securities Commission: Malaysian Code on Corporate Governance', 'Bursa Malaysia: governance, risk-management and internal-control statement', 'SSM: Companies Act 2016']],
+        glc: ['Government-linked company', ['Putrajaya Committee on GLC High Performance: the Green Book', 'If listed: SC (MCCG) and Bursa', 'SSM: Companies Act 2016']],
+        sdn: ['Private Sdn. Bhd. (unlisted)', ['SSM: Companies Act 2016', 'No listing rules; MCCG is good practice, not a listing obligation']],
+        llp: ['Professional LLP', ['SSM: Limited Liability Partnerships Act 2012']],
+        us: ['Subsidiary listed in the US', ['SOX (US law): reliable disclosure, internal controls, penalties', 'Plus Malaysian company law for the Malaysian entity']],
+    };
+    let key = 'plc';
+    const box = V.h('div', { class: 'vis-table-wrap' }), read = V.h('p', { class: 'vis-readout' });
+    root.append(V.seg(Object.entries(ORG).map(([k, o]) => [k, o[0]]), key, v => { key = v; draw(); }), box, read);
+    function draw() {
+        box.innerHTML = `<table class="vis-table" style="width:100%"><tr><th>${ORG[key][0]}: who sets the rules?</th></tr>${ORG[key][1].map(x => `<tr><td>${x}</td></tr>`).join('')}<tr><td><i>Voluntary frameworks any firm may adopt: COSO ERM, ISO 31000</i></td></tr></table>`;
+        read.innerHTML = 'Match the organisation to the body. Standards (COSO, ISO) are chosen; regulations and listing requirements are imposed.';
+    }
+    draw();
+};
+
+ML_VIS.t3_framework_picker = function (root) {
+    const NEED = {
+        a: ['A US-listed firm must prove its financial reports are reliable after Enron.', 'SOX (law)'],
+        b: ['Link 4 objectives, 8 ERM components and 4 organisational levels in one structure.', 'COSO ERM (framework)'],
+        c: ['Adaptable principles + framework + process; integrate RM into decisions; not certifiable.', 'ISO 31000 (standard / guidance)'],
+        d: ['A catalogue of techniques to assess risk, such as scenario analysis.', 'ISO/IEC 31010'],
+        e: ['Everyone must use the same risk vocabulary.', 'ISO Guide 73'],
+        f: ['A process that begins by establishing the context.', 'AS/NZS 4360'],
+        g: ['Malaysian listed companies: identify principal risks and implement systems.', 'MCCG (Securities Commission)'],
+        h: ['Improve board effectiveness at government-linked companies.', 'The Green Book (PCG)'],
+    };
+    let key = 'a', shown = false;
+    const box = V.h('div', { class: 'vis-table-wrap' }), read = V.h('p', { class: 'vis-readout' });
+    const btn = V.btn('Reveal', () => { shown = !shown; draw(); }, 'primary');
+    root.append(V.seg(Object.keys(NEED).map((k, i) => [k, 'Need ' + (i + 1)]), key, v => { key = v; shown = false; draw(); }), V.h('div', { class: 'vis-row' }, btn), box, read);
+    function draw() {
+        box.innerHTML = `<table class="vis-table" style="width:100%"><tr><th>The need</th><td>${NEED[key][0]}</td></tr><tr><th>Use</th><td class="${shown ? 'hl' : ''}">${shown ? NEED[key][1] : '<i>decide first</i>'}</td></tr></table>`;
+        btn.textContent = shown ? 'Hide' : 'Reveal';
+        read.innerHTML = 'First decide the <b>nature</b>: law (must), framework or standard (how good practice can be structured), or code (best practice with listing force).';
+    }
+    draw();
 };
 // Topic 4 visuals
 ML_VIS.t4_materiality = function (root) {
@@ -589,6 +898,176 @@ ML_VIS.t4_esg_chain = function (root) {
         next.textContent = step >= steps.length ? '↺ Start again' : 'Next step';
         read.innerHTML = step >= steps.length ? `<b>${CASES[key][0]}</b> ended as an enterprise-value problem. Answer with the chain, not one label: ESG driver → enterprise risks → value impact.`
             : 'Ask at each step: which enterprise risk has the ESG issue turned into now?';
+    }
+    draw();
+};
+// Topic 4 visuals (part 2): concept-explanation widgets
+ML_VIS.t4_time_horizon_sim = function (root) {
+    let h = 0.6;
+    const YEARS = 20, PRICE = 5, W = 560, H = 250, svg = V.svg(W, H), read = V.h('p', { class: 'vis-readout' });
+    root.append(V.slider('Share of the forest cut each year', 0.05, 1, 0.05, h, v => { h = v; draw(); }, v => Math.round(v * 100) + '%'), svg, read);
+    const run = rate => {
+        let S = 100, tot = 0; const yr = [];
+        for (let y = 0; y < YEARS; y++) { const cut = rate * S; tot += cut * PRICE; yr.push(cut * PRICE); S = S - cut; S += 0.3 * S * (1 - S / 100); }
+        return { yr, tot, S };
+    };
+    function draw() {
+        const a = run(h), best = run(0.15), L = 50, T = 14, PW = 490, PH = 190, top = Math.max(...a.yr, 60);
+        V.clear(svg); const r = V.rng(5), bw = PW / YEARS - 4;
+        V.rline(svg, L, T + PH, L + PW, T + PH, V.C.ink, 1.3, r); V.rline(svg, L, T, L, T + PH, V.C.ink, 1.3, r);
+        a.yr.forEach((v, i) => { const hh = v / top * PH; svg.append(V.s('rect', { x: L + 2 + i * (bw + 4), y: T + PH - hh, width: bw, height: Math.max(hh, 0.5), fill: V.C.amber, opacity: 0.75 })); });
+        const bl = best.yr.map((v, i) => (i ? 'L' : 'M') + (L + 2 + i * (bw + 4) + bw / 2) + ' ' + (T + PH - v / top * PH)).join(' ');
+        svg.append(V.s('path', { d: bl, fill: 'none', stroke: V.C.green, 'stroke-width': 2.5, 'stroke-dasharray': '6 4' }));
+        V.text(svg, L + PW, T + 10, 'bars: your cutting rate · dashed: sustainable 15%', { size: 12, anchor: 'end', color: '#64748b' });
+        V.text(svg, L + PW / 2, H - 6, 'years →   (profit per year, RMm)', { size: 12, color: '#64748b' });
+        read.innerHTML = `Year-1 profit: <b>RM${V.fmt(a.yr[0], 0)}m</b>. 20-year total: <b>RM${V.fmt(a.tot, 0)}m</b>; forest left: ${V.fmt(a.S, 0)}%. ` +
+            `A sustainable 15% cut earns RM${V.fmt(best.yr[0], 0)}m in year 1 but <b>RM${V.fmt(best.tot, 0)}m</b> over 20 years. ` +
+            (a.tot < best.tot ? '<b>Counter-intuitive:</b> cutting more today leaves you with less in total: the activity destroys the capacity it depends on.' : 'You are near the sustainable rate: present needs met without destroying future capacity.');
+    }
+    draw();
+};
+
+ML_VIS.t4_externality_slider = function (root) {
+    let p = 60, internal = false;
+    const W = 560, H = 210, svg = V.svg(W, H), read = V.h('p', { class: 'vis-readout' });
+    const tb = V.btn('Regulator makes the firm pay (fines / carbon price)', () => { internal = !internal; tb.classList.toggle('primary', internal); draw(); });
+    root.append(V.slider('Pollution allowed (cheaper waste disposal)', 0, 100, 10, p, v => { p = v; draw(); }, v => v + '%'), V.h('div', { class: 'vis-row' }, tb), svg, read);
+    function draw() {
+        const ext = 0.006 * p * p, profit = 80 + 0.4 * p - (internal ? ext : 0), society = 80 + 0.4 * p - ext;
+        const items = [['Reported company profit', profit, V.C.amber], ['Cost pushed onto society', ext, V.C.rose], ['Net benefit to society', society, V.C.green]];
+        V.clear(svg); const r = V.rng(7);
+        items.forEach(([lab, v, c], i) => {
+            const y = 20 + i * 58, w = Math.max(v, 0) * 2.6;
+            V.text(svg, 10, y + 18, lab, { size: 13, anchor: 'start' });
+            V.rrect(svg, 200, y, Math.max(w, 2), 36, c, c + '22', r);
+            V.text(svg, 206 + w, y + 18, 'RM' + V.fmt(v, 0) + 'm', { size: 14, weight: 700, color: c, anchor: 'start' });
+        });
+        read.innerHTML = internal ? '<b>The hidden cost is now on the firm\'s books.</b> What looked like extra profit was an environmental liability waiting to become a financial one: regulatory, legal and reputational risk.' :
+            `More pollution lifts reported profit to RM${V.fmt(profit, 0)}m, but society bears RM${V.fmt(ext, 0)}m of hidden cost. <b>Counter-intuitive:</b> the most "profitable" setting can be the one destroying the most value. Switch on regulation to see the cost come home.`;
+    }
+    draw();
+};
+
+ML_VIS.t4_greenwash_detector = function (root) {
+    const EV = [['base', 'Measured emissions baseline', 25], ['verify', 'Third-party verification', 25], ['scope', 'Suppliers / full scope included', 20], ['owner', 'Board-approved, named owner', 15], ['method', 'Published methodology', 15]];
+    const on = {}; let claim = 90;
+    const W = 560, H = 150, svg = V.svg(W, H), read = V.h('p', { class: 'vis-readout' });
+    const btns = V.h('div', { class: 'vis-row' }, EV.map(([k, t, w]) => {
+        const b = V.h('button', { type: 'button', class: 'vis-btn' }, '+ ' + t);
+        b.addEventListener('click', () => { on[k] = !on[k]; b.classList.toggle('primary', !!on[k]); b.textContent = (on[k] ? '● ' : '+ ') + t; draw(); });
+        return b;
+    }));
+    root.append(V.slider('Strength of the public claim', 0, 100, 5, claim, v => { claim = v; draw(); }, v => v < 30 ? '"we are trying"' : v < 70 ? '"greener than before"' : '"100% carbon neutral"'), btns, svg, read);
+    function draw() {
+        const ev = EV.reduce((a, [k, , w]) => a + (on[k] ? w : 0), 0), gap = claim - ev;
+        V.clear(svg); const r = V.rng(2);
+        [['Claim', claim, V.C.amber], ['Evidence', ev, V.C.green]].forEach(([l, v, c], i) => {
+            const y = 14 + i * 52;
+            V.text(svg, 10, y + 18, l, { size: 14, anchor: 'start', weight: 700 });
+            V.rrect(svg, 100, y, Math.max(v * 4.2, 2), 36, c, c + '22', r);
+            V.text(svg, 106 + v * 4.2, y + 18, v, { size: 14, weight: 700, anchor: 'start', color: c });
+        });
+        const verdict = gap <= 10 ? ['credible', V.C.green] : gap <= 40 ? ['exaggerated', V.C.amber] : ['GREENWASHING RISK', V.C.rose];
+        V.text(svg, 10, 134, 'Gap = ' + Math.max(gap, 0) + ' → ' + verdict[0], { size: 15, anchor: 'start', weight: 700, color: verdict[1] });
+        read.innerHTML = 'Greenwashing = claim greater than evidence. Each piece of evidence is a <b>governance</b> act (measure, verify, own, disclose method). ' +
+            '<b>Counter-intuitive:</b> a modest, honest claim with little evidence is safer than a bold claim with some evidence; the gap is what regulators (like ASIC with Tlou Energy) punish.';
+    }
+    draw();
+};
+
+ML_VIS.t4_score_vs_reality = function (root) {
+    let polish = 70;
+    const W = 560, H = 240, svg = V.svg(W, H), read = V.h('p', { class: 'vis-readout' });
+    root.append(V.slider('Budget spent on polishing the score (vs real change)', 0, 100, 10, polish, v => { polish = v; draw(); }, v => v + '%'), svg, read);
+    function draw() {
+        const p = polish / 100, N = 6, score = [40], real = [40];
+        for (let y = 1; y < N; y++) { score.push(Math.min(95, score[y - 1] + 6 + 10 * p)); real.push(Math.min(95, real[y - 1] + 9 * (1 - p))); }
+        const L = 50, T = 14, PW = 470, PH = 180, X = i => L + i / (N - 1) * PW, Y = v => T + PH - v / 100 * PH;
+        V.clear(svg); const r = V.rng(4);
+        V.rline(svg, L, T + PH, L + PW, T + PH, V.C.ink, 1.3, r); V.rline(svg, L, T, L, T + PH, V.C.ink, 1.3, r);
+        [[score, V.C.amber, 'ESG score'], [real, V.C.green, 'real performance']].forEach(([arr, c, lab]) => {
+            svg.append(V.s('path', { d: arr.map((v, i) => (i ? 'L' : 'M') + X(i) + ' ' + Y(v)).join(' '), fill: 'none', stroke: c, 'stroke-width': 3 }));
+            V.text(svg, X(N - 1) - 4, Y(arr[N - 1]) - 10, lab, { size: 12, color: c, anchor: 'end', weight: 700 });
+        });
+        V.text(svg, L + PW / 2, H - 6, 'years →', { size: 12, color: '#64748b' });
+        const gap = score[N - 1] - real[N - 1], risk = Math.min(95, Math.max(2, gap * 1.6));
+        read.innerHTML = `After 5 years the score is <b>${Math.round(score[N - 1])}</b> but real performance is <b>${Math.round(real[N - 1])}</b>: a credibility gap of ${Math.round(gap)}. Rough chance the gap is exposed as greenwashing: <b>${Math.round(risk)}%</b>. ` +
+            '<b>Counter-intuitive:</b> the fastest way to a high score is the slowest way to real value. Index inclusion (FTSE4Good) should be an outcome, not the objective.';
+    }
+    draw();
+};
+
+ML_VIS.t4_net_zero_calc = function (root) {
+    let e0 = 100, cut = 10, off = 90;
+    const W = 560, H = 300, svg = V.svg(W, H), read = V.h('p', { class: 'vis-readout' });
+    root.append(V.h('div', { class: 'vis-row' }, V.slider('Real emission cuts vs baseline', 0, 80, 5, cut, v => { cut = v; draw(); }, v => v + '%'),
+        V.slider('Offsets / removals bought', 0, 100, 5, off, v => { off = v; draw(); }, v => v + 'k t')), svg, read);
+    function draw() {
+        const gross = e0 * (1 - cut / 100), net = gross - off, target = e0 * 0.6;
+        V.clear(svg); const r = V.rng(6), base = 150, sc = 1.1;
+        V.rline(svg, 20, base, 540, base, '#64748b', 1.4, r);
+        const bar = (x, v, c, lab) => { const hh = Math.abs(v) * sc; V.rrect(svg, x, v >= 0 ? base - hh : base, 90, Math.max(hh, 2), c, c + '22', r); V.text(svg, x + 45, v >= 0 ? base - hh - 12 : base + hh + 14, V.fmt(v, 0) + 'k', { size: 13, weight: 700, color: c }); V.text(svg, x + 45, 288, lab, { size: 12, color: '#475569' }); };
+        bar(30, e0, V.C.slate, 'baseline E0');
+        bar(150, gross, V.C.amber, 'gross now');
+        bar(270, -off, V.C.green, 'removals');
+        bar(390, net, net <= 0 ? V.C.green : V.C.rose, 'net');
+        V.rline(svg, 140, base - target * sc, 250, base - target * sc, V.C.violet, 1.6, r, { 'stroke-dasharray': '6 4' });
+        V.text(svg, 250, base - target * sc - 8, '40% cut target', { size: 11, color: V.C.violet, anchor: 'end' });
+        const nz = net <= 0, met = gross <= target;
+        read.innerHTML = `Net emissions: <b>${V.fmt(net, 0)}k t</b> → ${nz ? '<b>"net zero" can be claimed</b>' : 'not net zero'}. Real-cut target (E0 x 0.6 = ${V.fmt(target, 0)}k): ${met ? 'met' : '<b>missed</b>'}. ` +
+            (nz && !met ? '<b>Counter-intuitive:</b> the firm is "net zero" while still emitting almost as much as before; it bought its way there. That gap between the claim and the operating reality is where greenwashing risk lives.' :
+                'Net zero balances emissions with removals; it does not require zero gross emissions, but credible plans cut gross emissions first and offset the remainder.');
+    }
+    draw();
+};
+
+ML_VIS.t4_kri_lead = function (root) {
+    const NM = [2, 3, 2, 4, 5, 7, 9, 12, 15, 18, 22, 26];  // monthly near-miss reports; serious accident in month 11
+    let thr = 10;
+    const W = 560, H = 230, svg = V.svg(W, H), read = V.h('p', { class: 'vis-readout' });
+    root.append(V.slider('KRI alert threshold (near-misses per month)', 3, 25, 1, thr, v => { thr = v; draw(); }), svg, read);
+    function draw() {
+        const L = 40, T = 14, PW = 490, PH = 170, bw = PW / NM.length - 6, ACC = 10;
+        V.clear(svg); const r = V.rng(8);
+        V.rline(svg, L, T + PH, L + PW, T + PH, V.C.ink, 1.3, r);
+        const alert = NM.findIndex(v => v >= thr), falseAlarms = NM.slice(0, 4).filter(v => v >= thr).length;
+        NM.forEach((v, i) => {
+            const x = L + 3 + i * (bw + 6), hh = v / 28 * PH, c = i === alert ? V.C.amber : i === ACC ? V.C.rose : V.C.sky;
+            svg.append(V.s('rect', { x, y: T + PH - hh, width: bw, height: hh, fill: c, opacity: 0.8 }));
+            V.text(svg, x + bw / 2, T + PH + 14, 'M' + (i + 1), { size: 11, color: '#64748b' });
+        });
+        const ty = T + PH - thr / 28 * PH;
+        V.rline(svg, L, ty, L + PW, ty, V.C.amber, 1.6, r, { 'stroke-dasharray': '6 4' });
+        V.text(svg, L + 4, ty - 6, 'alert threshold', { size: 11, color: V.C.amber, anchor: 'start' });
+        const ax = L + 3 + ACC * (bw + 6) + bw / 2;
+        V.text(svg, ax, T + 10, 'serious accident', { size: 12, color: V.C.rose, weight: 700 });
+        const lead = alert < 0 ? -1 : ACC - alert;
+        read.innerHTML = alert < 0 || lead <= 0 ? '<b>Too late:</b> the KRI never fired before the accident: that is reactive management (scandal → headlines → reaction).' :
+            `The KRI fires in month ${alert + 1}: <b>${lead} months of warning</b> before the accident.` + (falseAlarms ? ` But set this low it also fires ${falseAlarms} time(s) in the quiet early months: a false-alarm cost.` : '') +
+            ' ESG risk management earns its value through <b>earlier detection</b>; choosing the threshold is a trade-off between warning time and false alarms.';
+    }
+    draw();
+};
+
+ML_VIS.t4_concept_sorter = function (root) {
+    const IT = {
+        a: ['Meeting present needs without compromising future generations', 'Sustainability (the concept)'],
+        b: ['17 goals and 169 targets agreed by the UN in 2015', 'SDGs (global goals)'],
+        c: ['IOI maps its own strategy to the SDGs relevant to its operations', 'Corporate sustainability (business translation)'],
+        d: ['Board oversight, labour standards and emissions as factors in judging a firm', 'ESG (organisational lens)'],
+        e: ['120,000 tonnes of CO₂e emitted last year', 'ESG metric (measurement)'],
+        f: ['Inclusion in the FTSE4Good Bursa Malaysia index', 'ESG rating / index (external outcome)'],
+        g: ['A material E/S/G condition that could damage the value of the firm', 'ESG risk'],
+        h: ['Advertising "carbon neutral" with no verified emissions data', 'Greenwashing'],
+    };
+    let key = 'a', shown = false;
+    const box = V.h('div', { class: 'vis-table-wrap' }), read = V.h('p', { class: 'vis-readout' });
+    const btn = V.btn('Reveal', () => { shown = !shown; draw(); }, 'primary');
+    root.append(V.seg(Object.keys(IT).map((k, i) => [k, 'Statement ' + (i + 1)]), key, v => { key = v; shown = false; draw(); }), V.h('div', { class: 'vis-row' }, btn), box, read);
+    function draw() {
+        box.innerHTML = `<table class="vis-table" style="width:100%"><tr><th>Statement</th><td>${IT[key][0]}</td></tr><tr><th>Concept</th><td class="${shown ? 'hl' : ''}">${shown ? IT[key][1] : '<i>decide first</i>'}</td></tr></table>`;
+        btn.textContent = shown ? 'Hide' : 'Reveal';
+        read.innerHTML = 'Goal, global targets, business translation, organisational lens, measurement, external outcome, risk, misleading claim: eight different things that all sound like "sustainability".';
     }
     draw();
 };
