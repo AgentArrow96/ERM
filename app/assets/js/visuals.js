@@ -294,6 +294,163 @@ ML_VIS.t1_beta = function (root) {
     }
     draw();
 };
+// Topic 1 visuals (part 2): concept-explanation widgets
+ML_VIS.t1_objective_lens = function (root) {
+    const FIRMS = [['AirAsia (fuel is a big cost)', -0.6, V.C.rose], ['PETRONAS (sells crude)', 0.8, V.C.green], ['Software house (little fuel)', -0.02, V.C.slate]];
+    let oil = 30;
+    const W = 560, H = 230, svg = V.svg(W, H), read = V.h('p', { class: 'vis-readout' });
+    root.append(V.slider('Oil price change', -30, 30, 5, oil, v => { oil = v; draw(); }, v => (v > 0 ? '+' : '') + v + '%'), svg, read);
+    function draw() {
+        V.clear(svg); const r = V.rng(21), mid = 330, sc = 5;
+        V.rline(svg, mid, 16, mid, H - 24, '#94a3b8', 1.3, r);
+        V.text(svg, mid, H - 8, "effect on this year's profit objective", { size: 12, color: '#64748b' });
+        FIRMS.forEach(([name, k, c], i) => {
+            const eff = k * oil, y = 30 + i * 62, w = Math.abs(eff) * sc;
+            V.text(svg, 8, y + 18, name, { size: 13, anchor: 'start' });
+            if (w > 1) V.rrect(svg, eff < 0 ? mid - w : mid, y, w, 34, c, c + '22', r);
+            V.text(svg, eff < 0 ? mid - w - 8 : mid + w + 8, y + 18, (eff > 0 ? '+' : '') + V.fmt(eff, 1) + '%', { size: 14, weight: 700, color: c, anchor: eff < 0 ? 'end' : 'start' });
+        });
+        read.innerHTML = oil === 0 ? 'No change in oil price: no deviation from any objective.' :
+            `The <b>same event</b> (oil ${oil > 0 ? 'up' : 'down'} ${Math.abs(oil)}%) is a threat to one firm, an opportunity to another and almost irrelevant to the third. ` +
+            "Risk is not the event itself: it is the <b>effect of uncertainty on each firm's objectives</b>. Name the objective before you name the risk.";
+    }
+    draw();
+};
+
+ML_VIS.t1_tail_sim = function (root) {
+    const YEARS = 30, pHit = 1 - Math.pow(0.99, YEARS);
+    const hits = sd => { const r = V.rng(sd * 7919); for (let y = 0; y < YEARS; y++) if (r() < 0.01) return true; return false; };
+    let seed = 1, cap = 20;
+    while (!hits(seed)) seed++;
+    const W = 560, H = 250, svg = V.svg(W, H), read = V.h('p', { class: 'vis-readout' });
+    const capS = V.slider('Capital the firm can lose and survive', 5, 150, 5, cap, v => { cap = v; draw(); }, v => 'RM' + v + 'm');
+    root.append(V.h('div', { class: 'vis-row' }, V.btn('Simulate another 30 years', () => { seed++; draw(); }, 'primary'), capS), svg, read);
+    function draw() {
+        const r = V.rng(seed * 7919), a = [], b = [];
+        let ca = 0, cb = 0, worstA = 0;
+        for (let y = 0; y < YEARS; y++) {
+            const la = r() < 0.01 ? 100 : 0; worstA = Math.max(worstA, la);
+            ca += la; cb += 1; a.push(ca); b.push(cb);
+        }
+        V.clear(svg); const rr = V.rng(3), L = 50, T = 14, PW = 490, PH = 190, top = Math.max(110, ca + 10, cap + 10);
+        const X = i => L + i / (YEARS - 1) * PW, Y = v => T + PH - v / top * PH;
+        V.rline(svg, L, T + PH, L + PW, T + PH, V.C.ink, 1.4, rr); V.rline(svg, L, T, L, T + PH, V.C.ink, 1.4, rr);
+        const path = (arr, c) => svg.append(V.s('path', { d: arr.map((v, i) => (i ? 'L' : 'M') + X(i) + ' ' + Y(v)).join(' '), fill: 'none', stroke: c, 'stroke-width': 3 }));
+        path(b, V.C.sky); path(a, V.C.rose);
+        V.rline(svg, L, Y(cap), L + PW, Y(cap), V.C.amber, 1.6, rr, { 'stroke-dasharray': '7 5' });
+        V.text(svg, L + 6, Y(cap) - 8, 'capital RM' + cap + 'm', { size: 12, color: V.C.amber, anchor: 'start' });
+        V.text(svg, X(YEARS - 1) - 4, Y(b[YEARS - 1]) + 14, 'Risk B: RM1m every year', { size: 12, color: V.C.sky, anchor: 'end' });
+        V.text(svg, X(2), Y(a[2]) - 12, 'Risk A: 1% chance a year of RM100m', { size: 12, color: V.C.rose, anchor: 'start' });
+        V.text(svg, L + PW / 2, H - 6, 'years →   (cumulative losses, RMm)', { size: 12, color: '#64748b' });
+        read.innerHTML = `Both risks have an expected loss of <b>RM1m a year</b>. In this run Risk B lost RM${cb}m steadily; Risk A lost RM${ca}m${worstA ? ' in one catastrophic year' : ' (no disaster this time; try another run)'}. ` +
+            `Across many 30-year periods, Risk A produces at least one RM100m year about <b>${V.fmt(pHit * 100, 0)}%</b> of the time` +
+            (cap < 100 ? `, and with RM${cap}m of capital that single year would <b>break the firm</b>. Risk B never threatens survival.` : '; with capital above RM100m the firm survives either way.') +
+            ' Same average, very different tail: look at the distribution, not just the mean.';
+    }
+    draw();
+};
+
+ML_VIS.t1_identify_lens = function (root) {
+    const EXP = ['Blocked emergency exit', 'Flammable storage', 'Single critical supplier', 'High short-term debt', 'Repeated forklift accidents', 'Unclear payment approvals'];
+    const METHODS = {
+        checklist: ['Questionnaires / checklists', [0, 1, 5], 'Systematic prompts catch common hazards and missing procedures.'],
+        inspect: ['Physical inspection', [0, 1], 'Walking the site reveals physical hazards no document shows.'],
+        flow: ['Flowcharts', [2, 5], 'Mapping the process exposes dependencies and weak steps.'],
+        fin: ['Financial statements', [3], 'The balance sheet reveals financial and liquidity exposure.'],
+        hist: ['Historical loss data', [4], 'Past losses reveal recurring control weaknesses.'],
+        all: ['All five together', [0, 1, 2, 3, 4, 5], 'Combined, the methods see the firm from every direction.'],
+    };
+    let m = 'inspect';
+    const grid = V.h('div', { class: 'vis-row' }), read = V.h('p', { class: 'vis-readout' });
+    root.append(V.seg(Object.entries(METHODS).map(([k, v]) => [k, v[0]]), m, v => { m = v; draw(); }), grid, read);
+    function draw() {
+        const found = METHODS[m][1];
+        V.clear(grid);
+        EXP.forEach((e, i) => {
+            const on = found.includes(i);
+            grid.append(V.h('span', { class: 'vis-chip', style: { borderColor: on ? V.C.green : '#cbd5e1', background: on ? V.C.greenS : '#f8fafc', color: on ? '#065f46' : '#94a3b8', fontWeight: on ? 700 : 400, fontSize: '13px', padding: '6px 12px' } }, (on ? 'found: ' : 'missed: ') + e));
+        });
+        read.innerHTML = `<b>${METHODS[m][0]}</b> finds ${found.length} of ${EXP.length} exposures. ${METHODS[m][2]} ` +
+            (m === 'all' ? 'That is why the slides list several identification methods.' : 'A balance sheet will not show a blocked exit, and an inspection will not show a looming debt repayment: <b>use several methods</b>.');
+    }
+    draw();
+};
+
+ML_VIS.t1_cascade = function (root) {
+    const CASES = {
+        cyber: ['Cyberattack on a bank', [['Hackers take IT systems down', 'root: operational'], ['Customers cannot transact', 'business / revenue'], ['Customers complain publicly', 'reputational'], ['Cash inflow falls', 'liquidity'], ['Profit and continuity objectives missed', 'effect on objective']]],
+        kfc: ['KFC Malaysia outlet closures', [['Boycott shifts customer sentiment', 'root: business (demand)'], ['Brand perception worsens', 'reputational (also a driver)'], ['Revenue per outlet falls', 'business consequence'], ['Outlets close temporarily', 'operational consequence'], ['Revenue objective missed', 'effect on objective']]],
+        ev: ['EV-battery maker, one supplier', [['Sole mineral supplier shuts down', 'root: resource / supplier'], ['Production stops for two months', 'operational consequence'], ['Orders cannot be fulfilled', 'business / customer'], ['Customers complain online', 'reputational'], ['Revenue collapses; debt hard to repay', 'funding liquidity']]],
+    };
+    let key = 'cyber', step = 1;
+    const stage = V.h('div', { class: 'vis-pipeline' }), read = V.h('p', { class: 'vis-readout' });
+    const next = V.btn('Next step', () => { const n = CASES[key][1].length; step = step >= n ? 1 : step + 1; draw(); }, 'primary');
+    root.append(V.seg(Object.entries(CASES).map(([k, c]) => [k, c[0]]), key, v => { key = v; step = 1; draw(); }), V.h('div', { class: 'vis-row' }, next), stage, read);
+    const tone = t => /^root/.test(t) ? V.C.rose : /objective/.test(t) ? V.C.amber : /liquidity/.test(t) ? V.C.violet : V.C.sky;
+    function draw() {
+        const steps = CASES[key][1];
+        V.clear(stage);
+        steps.slice(0, step).forEach(([t, cat], i) => stage.append(V.h('div', { class: 'vis-prow vis-chainrow' }, V.h('b', {}, (i + 1) + '. ' + t),
+            V.h('span', { class: 'vis-chip', style: { borderColor: tone(cat), background: tone(cat) + '18' } }, cat))));
+        next.textContent = step >= steps.length ? '↺ Start again' : 'Next step';
+        read.innerHTML = step >= steps.length ? 'One event, a <b>risk cascade</b>. A strong answer names the <b>root</b> first, then the consequences it triggers, instead of picking one word from a list.' :
+            'Keep stepping: which risk category is this link?';
+    }
+    draw();
+};
+
+ML_VIS.t1_market_moves = function (root) {
+    let view = 'dir', vol = 1;
+    const W = 560, H = 240, svg = V.svg(W, H), read = V.h('p', { class: 'vis-readout' });
+    root.append(V.h('div', { class: 'vis-row' }, V.seg([['dir', 'Directional view'], ['vol', 'Volatility view']], view, v => { view = v; draw(); }),
+        V.slider('Volatility', 0.3, 3, 0.1, vol, v => { vol = v; draw(); }, v => V.fmt(v, 1) + 'x')), svg, read);
+    function draw() {
+        const r = V.rng(11), N = 60, p = [4.40];
+        for (let i = 1; i < N; i++) p.push(p[i - 1] + 0.004 + V.gauss(r) * 0.02 * vol);
+        const lo = Math.min(...p), hi = Math.max(...p), L = 50, T = 18, PW = 480, PH = 176;
+        const X = i => L + i / (N - 1) * PW, Y = v => T + PH - (v - lo + 0.02) / (hi - lo + 0.04) * PH;
+        V.clear(svg); const rr = V.rng(2);
+        V.rline(svg, L, T + PH, L + PW, T + PH, V.C.ink, 1.3, rr); V.rline(svg, L, T, L, T + PH, V.C.ink, 1.3, rr);
+        if (view === 'vol') svg.append(V.s('rect', { x: L, y: Y(hi), width: PW, height: Y(lo) - Y(hi), fill: V.C.amberS, opacity: 0.7 }));
+        svg.append(V.s('path', { d: p.map((v, i) => (i ? 'L' : 'M') + X(i) + ' ' + Y(v)).join(' '), fill: 'none', stroke: V.C.sky, 'stroke-width': 2.5 }));
+        if (view === 'dir') {
+            V.arrow(svg, X(0), Y(p[0]), X(N - 1), Y(p[N - 1]), V.C.rose, 2, rr);
+            V.text(svg, X(N - 1) - 4, Y(p[N - 1]) + (p[N - 1] > p[0] ? 16 : -14), 'end ' + V.fmt(p[N - 1], 2), { size: 13, color: V.C.rose, anchor: 'end', weight: 700 });
+        } else {
+            V.text(svg, L + PW - 4, Y(hi) - 6, 'range ' + V.fmt(lo, 2) + ' to ' + V.fmt(hi, 2), { size: 13, color: V.C.amber, anchor: 'end', weight: 700 });
+        }
+        V.text(svg, L - 6, Y(p[0]), V.fmt(p[0], 2), { size: 11, color: '#64748b', anchor: 'end' });
+        V.text(svg, L + PW / 2, H - 6, 'USD/MYR over 60 days', { size: 12, color: '#64748b' });
+        const ch = (p[N - 1] / p[0] - 1) * 100;
+        read.innerHTML = view === 'dir' ? `<b>Directional risk</b> cares <b>where</b> the rate ends: USD/MYR moved ${ch > 0 ? 'up' : 'down'} ${V.fmt(Math.abs(ch), 1)}%, so a Malaysian importer paying in USD ${ch > 0 ? 'pays more' : 'pays less'} per dollar.` :
+            `<b>Non-directional (volatility) risk</b> cares <b>how much</b> it swings: the rate ranged over ${V.fmt((hi - lo) / p[0] * 100, 1)}% of its starting value. Raise the volatility slider: the swings grow even when the end point barely changes (this matters for options and hedging).`;
+    }
+    draw();
+};
+
+ML_VIS.t1_classify_quiz = function (root) {
+    const DIMS = ['Gain possible?', 'Can a portfolio remove it?', 'Enterprise category (origin)', 'Sensible control'];
+    const EV = {
+        fire: ['Factory fire', ['Pure: loss or no loss', 'Diversifiable (firm-specific)', 'Operational, with liquidity and reputational consequences', 'Prevention (safety rules) + reduction (sprinklers)']],
+        shares: ['Buying shares in one company', ['Speculative: gain, none or loss', 'Firm-specific part yes; market part no (systematic, β)', 'Market risk', 'Diversify the portfolio; limit position size']],
+        ceo: ['CEO resigns unexpectedly', ['Speculative: the successor may be better or worse', 'Diversifiable (firm-specific)', 'Business / resource (key person)', 'Succession planning (reduction)']],
+        rates: ['Bank Negara raises rates sharply', ['Speculative: some firms gain, many lose', 'Non-diversifiable (systematic)', 'Market risk (interest rate)', 'Hedge or fix borrowing rates (reduction)']],
+        model: ['Flawed credit-scoring model', ['Pure: losses only', 'Diversifiable (firm-specific)', 'Operational (model risk) at the root; credit losses follow', 'Model validation and review (prevention)']],
+        unpaid: ['Major customer cannot pay its invoice', ['Pure: loss or no loss', 'Diversifiable (firm-specific)', 'Credit risk', 'Credit checks (prevention); collateral or limits (reduction)']],
+        boycott: ['Consumer boycott of the brand', ['Pure for the firm: demand only falls', 'Diversifiable (firm-specific)', 'Business (demand) with a reputational component', 'Stakeholder engagement; diversify markets']],
+    };
+    let key = 'fire', shown = false;
+    const box = V.h('div', { class: 'vis-table-wrap' }), read = V.h('p', { class: 'vis-readout' });
+    const btn = V.btn('Reveal the labels', () => { shown = !shown; draw(); }, 'primary');
+    root.append(V.seg(Object.entries(EV).map(([k, e]) => [k, e[0]]), key, v => { key = v; shown = false; draw(); }), V.h('div', { class: 'vis-row' }, btn), box, read);
+    function draw() {
+        const rows = DIMS.map((d, i) => `<tr><th>${d}</th><td class="${shown ? 'hl' : ''}">${shown ? EV[key][1][i] : '<i>think first, then reveal</i>'}</td></tr>`).join('');
+        box.innerHTML = `<table class="vis-table" style="width:100%"><tr><th colspan="2">${EV[key][0]}</th></tr>${rows}</table>`;
+        btn.textContent = shown ? 'Hide labels' : 'Reveal the labels';
+        read.innerHTML = 'Each row asks a <b>different question</b>, so one event carries several labels at once. Answer each row in your head before revealing.';
+    }
+    draw();
+};
 // Topic 2 visuals
 ML_VIS.t2_silo_vs_erm = function (root) {
     const DEPTS = ['Finance: FX', 'Procurement: supplier', 'Strategy: expansion', 'Treasury: debt'];
