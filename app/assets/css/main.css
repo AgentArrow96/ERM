@@ -2391,6 +2391,11 @@
         .math-flow.single span { font-size: 14px; text-align: center; max-width: 100%; }
         .math-flow.single.boxed span { border: 0; background: none; padding: 2px 6px; }
         .pending-card { margin-top: 20px; }
+        .fig-notes { margin: -6px 0 18px; border-left: 4px solid var(--accent, #64748b); }
+        .card .fig-notes, .compare-side .fig-notes { margin: 6px 0 12px; padding: 10px 14px; background: var(--soft, #f8fafc); border-radius: 10px; }
+        .fig-notes h4 { margin: 0 0 6px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent, #475569); }
+        .fig-notes ul { margin: 6px 0 0; padding-left: 20px; }
+        .fig-notes li { margin: 4px 0; }
         .pending-card .action-row { margin-top: 12px; }
         .toc-panel > summary > * { width: auto !important; white-space: nowrap; }
         .diagram-viewer { background: #fff; }
